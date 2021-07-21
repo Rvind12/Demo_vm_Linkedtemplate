@@ -1,0 +1,22 @@
+$resourceGroupName="1-989d0691-playground-sandbox"
+$storageAccountName="testabccontainer"
+$containerName = "templates"
+
+$key = (Get-AzStorageAccountKey -ResourceGroupName $resourceGroupName -Name $storageAccountName).Value[0]
+$context = New-AzStorageContext -StorageAccountName $storageAccountName -StorageAccountKey $key
+
+$mainTemplateUri = $context.BlobEndPoint + "$containerName/localtemplate.json"
+$sasToken = New-AzStorageContainerSASToken `
+    -Context $context `
+    -Container $containerName `
+    -Permission r `
+    -ExpiryTime (Get-Date).AddHours(2.0)
+$newSas = $sasToken.substring(1)
+
+
+New-AzResourceGroupDeployment `
+  -Name Deploy12testin `
+  -ResourceGroupName $resourceGroupName `
+  -TemplateUri $mainTemplateUri `
+  -QueryString $newSas `
+  -verbose

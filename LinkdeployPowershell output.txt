@@ -1,0 +1,191 @@
+PS C:\WINDOWS\system32> $location = Read-Host -Prompt "Enter a location (i.e. centralus)"
+
+$resourceGroupName = "1-989d0691-playground-sandbox"
+$storageAccountName = "testabccontainer"
+$containerName = "templates" # The name of the Blob container to be created.
+
+$mainTemplateURL = "https://raw.githubusercontent.com/Rvind12/linktemplate/master/localtemplate.json"
+$linkedTemplateURL = "https://raw.githubusercontent.com/Rvind12/linktemplate/master/linkedtemplate.json"
+
+$mainFileName = "localtemplate.json" # A file name used for downloading and uploading the main template.Add-PSSnapin
+$linkedFileName = "linkedtemplate.json" # A file name used for downloading and uploading the linked template.
+
+# Download the templates
+Invoke-WebRequest -Uri $mainTemplateURL -OutFile "$home/$mainFileName"
+Invoke-WebRequest -Uri $linkedTemplateURL -OutFile "$home/$linkedFileName"
+
+
+# Create a storage account
+$storageAccount = New-AzStorageAccount `
+    -ResourceGroupName $resourceGroupName `
+    -Name $storageAccountName `
+    -Location $location `
+    -SkuName "Standard_LRS"
+
+$context = $storageAccount.Context
+
+# Create a container
+New-AzStorageContainer -Name $containerName -Context $context -Permission Container
+
+# Upload the templates
+Set-AzStorageBlobContent `
+    -Container $containerName `
+    -File "$home/$mainFileName" `
+    -Blob $mainFileName `
+    -Context $context
+
+Set-AzStorageBlobContent `
+    -Container $containerName `
+    -File "$home/$linkedFileName" `
+    -Blob $linkedFileName `
+    -Context $context
+
+Write-Host "Press [ENTER] to continue ..."
+Enter a location (i.e. centralus): westus
+
+
+   Storage Account Name: testabccontainer
+
+Name                 PublicAccess         LastModified                   IsDeleted  VersionId        
+----                 ------------         ------------                   ---------  ---------        
+templates            Container            7/19/2021 9:18:01 AM +00:00                                
+
+ICloudBlob                         : Microsoft.Azure.Storage.Blob.CloudBlockBlob
+BlobType                           : BlockBlob
+Length                             : 5728
+IsDeleted                          : False
+BlobClient                         : Azure.Storage.Blobs.BlobClient
+BlobBaseClient                     : Azure.Storage.Blobs.Specialized.BlockBlobClient
+BlobProperties                     : Azure.Storage.Blobs.Models.BlobProperties
+RemainingDaysBeforePermanentDelete : 
+ContentType                        : application/octet-stream
+LastModified                       : 7/19/2021 9:18:03 AM +00:00
+SnapshotTime                       : 
+ContinuationToken                  : 
+VersionId                          : 
+IsLatestVersion                    : 
+AccessTier                         : Hot
+TagCount                           : 0
+Tags                               : 
+Context                            : Microsoft.WindowsAzure.Commands.Storage.AzureStorageContext
+Name                               : localtemplate.json
+
+
+ICloudBlob                         : Microsoft.Azure.Storage.Blob.CloudBlockBlob
+BlobType                           : BlockBlob
+Length                             : 1381
+IsDeleted                          : False
+BlobClient                         : Azure.Storage.Blobs.BlobClient
+BlobBaseClient                     : Azure.Storage.Blobs.Specialized.BlockBlobClient
+BlobProperties                     : Azure.Storage.Blobs.Models.BlobProperties
+RemainingDaysBeforePermanentDelete : 
+ContentType                        : application/octet-stream
+LastModified                       : 7/19/2021 9:18:05 AM +00:00
+SnapshotTime                       : 
+ContinuationToken                  : 
+VersionId                          : 
+IsLatestVersion                    : 
+AccessTier                         : Hot
+TagCount                           : 0
+Tags                               : 
+Context                            : Microsoft.WindowsAzure.Commands.Storage.AzureStorageContext
+Name                               : linkedtemplate.json
+
+Press [ENTER] to continue ...
+
+
+
+PS C:\WINDOWS\system32> $resourceGroupName="1-989d0691-playground-sandbox"
+$storageAccountName="testabccontainer"
+$containerName = "templates"
+
+$key = (Get-AzStorageAccountKey -ResourceGroupName $resourceGroupName -Name $storageAccountName).Value[0]
+$context = New-AzStorageContext -StorageAccountName $storageAccountName -StorageAccountKey $key
+
+$mainTemplateUri = $context.BlobEndPoint + "$containerName/localtemplate.json"
+$sasToken = New-AzStorageContainerSASToken `
+    -Context $context `
+    -Container $containerName `
+    -Permission r `
+    -ExpiryTime (Get-Date).AddHours(2.0)
+$newSas = $sasToken.substring(1)
+
+
+New-AzResourceGroupDeployment `
+  -Name Deploy12testin `
+  -ResourceGroupName $resourceGroupName `
+  -TemplateUri $mainTemplateUri `
+  -QueryString $newSas `
+  -verbose
+
+Write-Host "Press [ENTER] to continue ..."
+VERBOSE: Performing the operation "Creating Deployment" on target "1-989d0691-playground-sandbox".
+VERBOSE: 2:50:23 PM - Template is valid.
+VERBOSE: 2:50:30 PM - Create template deployment 'Deploy12testin'
+VERBOSE: 2:50:30 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:50:37 PM - Resource Microsoft.Resources/deployments 'linkedTemplate' provisioning status is running
+VERBOSE: 2:50:38 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:50:45 PM - Resource Microsoft.Network/publicIPAddresses 'mynewvm-PublicIP12' provisioning status is running
+VERBOSE: 2:50:45 PM - Resource Microsoft.Network/networkSecurityGroups 'mynewvm-nsg12' provisioning status is running
+VERBOSE: 2:50:46 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:50:53 PM - Resource Microsoft.Network/publicIPAddresses 'mynewvm-PublicIP12' provisioning status is succeeded
+VERBOSE: 2:50:53 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:51:01 PM - Resource Microsoft.Storage/storageAccounts 'teststorz1234aravind' provisioning status is running
+VERBOSE: 2:51:01 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:51:08 PM - Resource Microsoft.Network/networkSecurityGroups 'mynewvm-nsg12' provisioning status is succeeded
+VERBOSE: 2:51:09 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:51:17 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:51:24 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:51:32 PM - Checking deployment status in 6 seconds
+VERBOSE: 2:51:40 PM - Resource Microsoft.Storage/storageAccounts 'teststorz1234aravind' provisioning status is succeeded
+VERBOSE: 2:51:41 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:51:48 PM - Resource Microsoft.Resources/deployments 'linkedTemplate' provisioning status is succeeded
+VERBOSE: 2:51:49 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:51:56 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:52:04 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:52:12 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:52:20 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:52:28 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:52:36 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:52:44 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:52:51 PM - Resource Microsoft.Network/virtualNetworks 'mynewvm-VirtualNetwork12' provisioning status is succeeded
+VERBOSE: 2:52:52 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:52:59 PM - Resource Microsoft.Network/networkInterfaces 'mynewvm-NetworkInterface12' provisioning status is succeeded
+VERBOSE: 2:53:00 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:53:07 PM - Resource Microsoft.Compute/virtualMachines 'mynewvm12' provisioning status is running
+VERBOSE: 2:53:08 PM - Checking deployment status in 9 seconds
+VERBOSE: 2:53:19 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:53:27 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:53:35 PM - Checking deployment status in 5 seconds
+VERBOSE: 2:53:43 PM - Resource Microsoft.Compute/virtualMachines 'mynewvm12' provisioning status is succeeded
+
+
+DeploymentName          : Deploy12testin
+ResourceGroupName       : 1-989d0691-playground-sandbox
+ProvisioningState       : Succeeded
+Timestamp               : 7/19/2021 9:23:36 AM
+Mode                    : Incremental
+TemplateLink            : 
+                          Uri            : https://testabccontainer.blob.core.windows.net/templates/localtemplate.json
+                          ContentVersion : 1.0.0.0
+                          
+Parameters              : 
+Outputs                 : 
+                          Name               Type                       Value     
+                          =================  =========================  ==========
+                          storageEndpoint    Object                     {
+                            "dfs": "https://teststorz1234aravind.dfs.core.windows.net/",
+                            "web": "https://teststorz1234aravind.z22.web.core.windows.net/",
+                            "blob": "https://teststorz1234aravind.blob.core.windows.net/",
+                            "queue": "https://teststorz1234aravind.queue.core.windows.net/",
+                            "table": "https://teststorz1234aravind.table.core.windows.net/",
+                            "file": "https://teststorz1234aravind.file.core.windows.net/"
+                          }
+                          
+DeploymentDebugLogLevel : 
+
+Press [ENTER] to continue ...
+
+
+
+PS C:\WINDOWS\system32> 
